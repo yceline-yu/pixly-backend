@@ -18,16 +18,16 @@ class Image {
 
   static async add({ name, camera, imageUrl, imageLocation }) {
     const duplicateCheck = await db.query(
-        `SELECT name
+      `SELECT name
            FROM images
            WHERE name = $1`,
-        [name]);
+      [name]);
 
     if (duplicateCheck.rows[0])
       throw new BadRequestError(`Duplicate image: ${name}`);
 
     const result = await db.query(
-        `INSERT INTO images
+      `INSERT INTO images
          ( name, camera, image_url, image_location )
            VALUES
              ($1, $2, $3, $4 )
@@ -37,12 +37,12 @@ class Image {
                     style, 
                     image_url as "imageUrl", 
                     image_location as "imageLocation" `,
-        [
-          name,
-          camera,
-          imageUrl,
-          imageLocation
-        ],
+      [
+        name,
+        camera,
+        imageUrl,
+        imageLocation
+      ],
     );
     const image = result.rows[0];
 
@@ -53,28 +53,24 @@ class Image {
    * with filters.
    *
    * searchFilters (all optional):
-   * - location
-   * - camera
+   * - style (will find case-insensitive, partial matches)
    * - name (will find case-insensitive, partial matches)
+   * - imageLocation (will find case-insensitive, partial matches)
+   * - camera (will find case-insensitive, partial matches)
    *
    * Returns {
-   *  where: "WHERE camera ILIKE $1 AND name ILIKE $2",
-   *  vals: [%Nikon%, '%Apple%']
+   *  where: "WHERE style ILIKE $1 AND name ILIKE $2",
+   *  vals: ['%normal%', '%Test%']
    * }
    */
 
-  static _filterWhereBuilder({ imageLocation, name, camera }) {
+  static _filterWhereBuilder({ name, style, imageLocation, camera }) {
     let whereParts = [];
     let vals = [];
 
-    if (imageLocation !== undefined) {
-      vals.push(`%${imageLocation}%`);
-      whereParts.push(`image_location ILIKE $${vals.length}`);
-    }
-
-    if (camera !== undefined) {
-      vals.push(`%${camera}%`);
-      whereParts.push(`camera ILIKE $${vals.length}`);
+    if (style) {
+      vals.push(`%${style}%`);
+      whereParts.push(`style ILIKE $${vals.length}`);
     }
 
     if (name) {
@@ -82,9 +78,19 @@ class Image {
       whereParts.push(`name ILIKE $${vals.length}`);
     }
 
+    if (imageLocation) {
+      vals.push(`%${imageLocation}%`);
+      whereParts.push(`image_location ILIKE $${vals.length}`);
+    }
+
+    if (camera) {
+      vals.push(`%${camera}%`);
+      whereParts.push(`camera ILIKE $${vals.length}`);
+    }
+
     const where = (whereParts.length > 0) ?
-        "WHERE " + whereParts.join(" AND ")
-        : "";
+      "WHERE " + whereParts.join(" AND ")
+      : "";
 
     return { where, vals };
   }
@@ -92,18 +98,19 @@ class Image {
   /** Find all images (optional filter on searchFilters).
    *
    * searchFilters (all optional):
-   * - imageLocation
-   * - camera
+   * - style (will find case-insensitive, partial matches)
    * - name (will find case-insensitive, partial matches)
+   * - imageLocation (will find case-insensitive, partial matches)
+   * - camera (will find case-insensitive, partial matches)
    *
    * Returns [{ id, name, style, camera, imageLocation, imageUrl }, ...]
    * */
 
   static async findAll(searchFilters = {}) {
-    const { imageLocation, camera, name } = searchFilters;
+    const { name, style, imageLocation, camera } = searchFilters;
 
     const { where, vals } = this._filterWhereBuilder({
-      imageLocation, camera, name,
+      name, style, imageLocation, camera
     });
 
     const imagesRes = await db.query(`
@@ -128,7 +135,7 @@ class Image {
 
   static async get(id) {
     const imagesRes = await db.query(
-        `SELECT id,
+      `SELECT id,
                 name,
                 style,
                 camera,
@@ -136,7 +143,7 @@ class Image {
                 image_url AS "imageUrl"
            FROM images
            WHERE id = $1`,
-        [id]);
+      [id]);
 
     const image = imagesRes.rows[0];
 
@@ -180,11 +187,11 @@ class Image {
 
   static async remove(id) {
     const result = await db.query(
-        `DELETE
+      `DELETE
            FROM images
            WHERE id = $1
            RETURNING id`,
-        [id]);
+      [id]);
     const image = result.rows[0];
 
     if (!image) throw new NotFoundError(`No image`);

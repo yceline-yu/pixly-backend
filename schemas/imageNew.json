@@ -1,0 +1,28 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "http://image.com/imageNew.schema.json",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "camera": {
+        "type": "string"
+      },
+      "imageLocation": {
+        "type": "string"
+      },
+      "imageUrl": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "name",
+      "camera",
+      "imageLocation",
+      "imageUrl"
+    ]
+  }
+  
